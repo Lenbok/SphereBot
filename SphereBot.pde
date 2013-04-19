@@ -35,16 +35,16 @@
  * PINS
  */
  
-#define XAXIS_DIR_PIN 7
-#define XAXIS_STEP_PIN 8
-#define XAXIS_ENABLE_PIN 6
-//#define XAXIS_ENDSTOP_PIN 3
-#define XAXIS_ENDSTOP_PIN -1
+#define YAXIS_DIR_PIN 7
+#define YAXIS_STEP_PIN 8
+#define YAXIS_ENABLE_PIN 6
+//#define YAXIS_ENDSTOP_PIN 3
+#define YAXIS_ENDSTOP_PIN -1
 
-#define YAXIS_DIR_PIN 10
-#define YAXIS_STEP_PIN 11
-#define YAXIS_ENABLE_PIN 9
-#define YAXIS_ENDSTOP_PIN -1 // <0 0> No Endstop!
+#define XAXIS_DIR_PIN 10
+#define XAXIS_STEP_PIN 11
+#define XAXIS_ENABLE_PIN 9
+#define XAXIS_ENDSTOP_PIN -1 // <0 0> No Endstop!
 
 #define SERVO_PIN 2
 
@@ -53,17 +53,17 @@
  */
 
 #define DEFAULT_PEN_UP_POSITION 40
-#define XAXIS_MIN_STEPCOUNT -467
-#define XAXIS_MAX_STEPCOUNT 467
+#define YAXIS_MIN_STEPCOUNT -467
+#define YAXIS_MAX_STEPCOUNT 467
 #define DEFAULT_ZOOM_FACTOR 0.65 //1. // With a Zoom-Faktor of .65, I can print gcode for Makerbot Unicorn without changes. 
                                // The zoom factor can be also manipulated by the propretiary code M402
 
 
 /* --------- */
 
-StepperModel xAxisStepper(XAXIS_DIR_PIN, XAXIS_STEP_PIN, XAXIS_ENABLE_PIN, XAXIS_ENDSTOP_PIN,
-        XAXIS_MIN_STEPCOUNT, XAXIS_MAX_STEPCOUNT, 200.0, 16);
-StepperModel rotationStepper(YAXIS_DIR_PIN, YAXIS_STEP_PIN, YAXIS_ENABLE_PIN, YAXIS_ENDSTOP_PIN,
+StepperModel penArmStepper(YAXIS_DIR_PIN, YAXIS_STEP_PIN, YAXIS_ENABLE_PIN, YAXIS_ENDSTOP_PIN,
+        YAXIS_MIN_STEPCOUNT, YAXIS_MAX_STEPCOUNT, 200.0, 16);
+StepperModel rotationStepper(XAXIS_DIR_PIN, XAXIS_STEP_PIN, XAXIS_ENABLE_PIN, XAXIS_ENDSTOP_PIN,
         0, 0, 200.0, 16);
 
 SoftwareServo servo;
@@ -115,11 +115,11 @@ void setup()
     Timer1.attachInterrupt(doInterrupt);
   
 #ifdef AUTO_HOMING
-    xAxisStepper.autoHoming();
-    xAxisStepper.setTargetPosition(0.);
+    penArmStepper.autoHoming();
+    penArmStepper.setTargetPosition(0.);
     commitSteppers(maxFeedrate);
     delay(2000);
-    xAxisStepper.enableStepper(false);
+    penArmStepper.enableStepper(false);
 #endif
 }
 
@@ -140,28 +140,28 @@ void doInterrupt()
       else
       {
           rotationStepper.doStep(intervals);
-          xAxisStepper.doStep(intervals);
+          penArmStepper.doStep(intervals);
       }
   }
 }
 
 void commitSteppers(double speedrate)
 {
-  long deltaStepsX = xAxisStepper.delta;
-  if(deltaStepsX != 0L)
+  long deltaStepsY = penArmStepper.delta;
+  if(deltaStepsY != 0L)
   {
-    xAxisStepper.enableStepper(true);
+    penArmStepper.enableStepper(true);
   }
 
-  long deltaStepsY = rotationStepper.delta;
-  if(deltaStepsY != 0L)
+  long deltaStepsX = rotationStepper.delta;
+  if(deltaStepsX != 0L)
   {
     rotationStepper.enableStepper(true);
   }
   long masterSteps = (deltaStepsX>deltaStepsY)?deltaStepsX:deltaStepsY;
 
-  double deltaDistanceX = xAxisStepper.targetPosition-xAxisStepper.getCurrentPosition();
-  double deltaDistanceY = rotationStepper.targetPosition-rotationStepper.getCurrentPosition();
+  double deltaDistanceY = penArmStepper.targetPosition-penArmStepper.getCurrentPosition();
+  double deltaDistanceX = rotationStepper.targetPosition-rotationStepper.getCurrentPosition();
   		
   // how long is our line length?
   double distance = sqrt(deltaDistanceX*deltaDistanceX+deltaDistanceY*deltaDistanceY);
@@ -175,7 +175,7 @@ void commitSteppers(double speedrate)
   const long negative_half_interval = -intervals / 2;
   
   rotationStepper.counter = negative_half_interval;
-  xAxisStepper.counter = negative_half_interval;
+  penArmStepper.counter = negative_half_interval;
 
 //  Serial.print("Speedrate:");
 //  Serial.print(speedrate, 6);
@@ -199,7 +199,7 @@ void commitSteppers(double speedrate)
 //  Serial.print(intervals);
 //  Serial.print(" negative_half_interval:");
 //  Serial.println(negative_half_interval);
-//  Serial.print("Y currentStepCount:");
+//  Serial.print("X currentStepCount:");
 //  Serial.print(rotationStepper.currentStepcount);
 //  Serial.print(" targetStepCount:");
 //  Serial.println(rotationStepper.targetStepcount);
@@ -264,8 +264,8 @@ void process_commands(char command[], int command_length) // deals with standard
   {
     int codenum = (int)strtod(&command[1], NULL);
     
-    double tempX = xAxisStepper.getCurrentPosition();
-    double tempY = rotationStepper.getCurrentPosition();
+    double tempY = penArmStepper.getCurrentPosition();
+    double tempX = rotationStepper.getCurrentPosition();
     
     double xVal;
     boolean hasXVal = getValue('X', command, &xVal);
@@ -308,21 +308,21 @@ void process_commands(char command[], int command_length) // deals with standard
     switch(codenum)
     {
       case 0: // G0, Rapid positioning
-        xAxisStepper.setTargetPosition(tempX);
-        rotationStepper.setTargetPosition(tempY);
+        penArmStepper.setTargetPosition(tempY);
+        rotationStepper.setTargetPosition(tempX);
         commitSteppers(maxFeedrate);
         break;
       case 1: // G1, linear interpolation at specified speed
-        xAxisStepper.setTargetPosition(tempX);
-        rotationStepper.setTargetPosition(tempY);
+        penArmStepper.setTargetPosition(tempY);
+        rotationStepper.setTargetPosition(tempX);
         commitSteppers(feedrate);
         break;
       case 2: // G2, Clockwise arc
       case 3: // G3, Counterclockwise arc
         if(hasIVal && hasJVal)
         {
-            double centerX=xAxisStepper.getCurrentPosition()+iVal;
-            double centerY=rotationStepper.getCurrentPosition()+jVal;
+            double centerY=penArmStepper.getCurrentPosition()+iVal;
+            double centerX=rotationStepper.getCurrentPosition()+jVal;
             drawArc(centerX, centerY, tempX, tempY, (codenum==2));
         }
         else if(hasRVal)
@@ -357,7 +357,7 @@ void process_commands(char command[], int command_length) // deals with standard
     switch(codenum)
     {   
       case 18: // Disable Drives
-        xAxisStepper.resetStepper();
+        penArmStepper.resetStepper();
         rotationStepper.resetStepper();
         break;
 
@@ -382,18 +382,7 @@ void process_commands(char command[], int command_length) // deals with standard
         }
         break;
         
-      case 400: // Propretary: Reset X-Axis-Stepper settings to new object diameter
-        if(getValue('S', command, &value))
-        {
-          xAxisStepper.resetSteppersForObjectDiameter(value);
-          xAxisStepper.setTargetPosition(0.);
-          commitSteppers(maxFeedrate);
-          delay(2000);
-          xAxisStepper.enableStepper(false);
-        }
-        break;
-        
-      case 401: // Propretary: Reset Y-Axis-Stepper settings to new object diameter
+      case 400: // Proprietary: Reset X-Axis-Stepper settings to new object diameter
         if(getValue('S', command, &value))
         {
           rotationStepper.resetSteppersForObjectDiameter(value);
@@ -401,6 +390,17 @@ void process_commands(char command[], int command_length) // deals with standard
           commitSteppers(maxFeedrate);
           delay(2000);
           rotationStepper.enableStepper(false);
+        }
+        break;
+        
+      case 401: // Propretary: Reset Y-Axis-Stepper settings to new object diameter
+        if(getValue('S', command, &value))
+        {
+          penArmStepper.resetSteppersForObjectDiameter(value);
+          penArmStepper.setTargetPosition(0.);
+          commitSteppers(maxFeedrate);
+          delay(2000);
+          penArmStepper.enableStepper(false);
         }
         break;
         
@@ -437,8 +437,8 @@ void drawArc(double centerX, double centerY, double endpointX, double endpointY,
   double bY;
 
   // figure out our deltas
-  double currentX = xAxisStepper.getCurrentPosition();
-  double currentY = rotationStepper.getCurrentPosition();
+  double currentY = penArmStepper.getCurrentPosition();
+  double currentX = rotationStepper.getCurrentPosition();
   aX = currentX - centerX;
   aY = currentY - centerY;
   bX = endpointX - centerX;
@@ -492,8 +492,8 @@ void drawArc(double centerX, double centerY, double endpointX, double endpointY,
     newPointY= centerY + radius	* sin(angleA + angle * ((double) step / steps));
 
     // start the move
-    xAxisStepper.setTargetPosition(newPointX);
-    rotationStepper.setTargetPosition(newPointY);
+    penArmStepper.setTargetPosition(newPointY);
+    rotationStepper.setTargetPosition(newPointX);
     commitSteppers(feedrate);
     
     while(isRunning)
