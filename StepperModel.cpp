@@ -16,7 +16,7 @@
  */
  
 #include "StepperModel.h"
-#include "WProgram.h"
+#include "Arduino.h"
 
 
 /*
