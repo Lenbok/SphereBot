@@ -55,8 +55,13 @@ StepperModel::StepperModel(int inDirPin, int inStepPin, int inEnablePin, int inE
 
 void StepperModel::resetSteppersForObjectDiameter(double diameter)
 {
+  resetSteppersForObjectCircumference(diameter*M_PI);
+}
+
+void StepperModel::resetSteppersForObjectCircumference(double circumference)
+{
   // Calculate the motor steps required to move per mm.
-  steps_per_mm = (int)((kStepsPerRevolution/(diameter*M_PI))*kMicroStepping+0.5);
+  steps_per_mm = (int)((kStepsPerRevolution/circumference)*kMicroStepping+0.5);
   if(endStopPin>=0)
   {
 #ifdef AUTO_HOMING
@@ -65,7 +70,9 @@ void StepperModel::resetSteppersForObjectDiameter(double diameter)
     enableStepper(false);
   }
   else
-    resetStepper();    
+    resetStepper();
+//  Serial.print("steps per mm is now: ");
+//  Serial.println(steps_per_mm);
 }
 
 long StepperModel::getStepsForMM(double mm)

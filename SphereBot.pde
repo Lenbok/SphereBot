@@ -52,11 +52,28 @@
  * Other Configuration
  */
 
-#define DEFAULT_PEN_UP_POSITION 40
-#define YAXIS_MIN_STEPCOUNT -467
-#define YAXIS_MAX_STEPCOUNT 467
-#define DEFAULT_ZOOM_FACTOR 0.65 //1. // With a Zoom-Faktor of .65, I can print gcode for Makerbot Unicorn without changes. 
+#define DEFAULT_PEN_UP_POSITION 108
+#define YAXIS_MIN_STEPCOUNT -420
+#define YAXIS_MAX_STEPCOUNT 420
+#define DEFAULT_ZOOM_FACTOR 1. // With a Zoom-Faktor of .65, I can print gcode for Makerbot Unicorn without changes. 
                                // The zoom factor can be also manipulated by the propretiary code M402
+/*
+
+For images designed for Evil Mad Scientist Eggbots, try inserting in
+the gcode preamble to set an appropriate zoom factor:
+
+M402 S0.1536
+
+(or change the DEFAULT_ZOOM_FACTOR above)
+
+Eggbots images are usually 3200 x 800 px (which directly corresponds
+to steps). In our world the unicorn plugin converts the px into mm
+gcode units (with some conversion error), which this code then
+converts back into steps via both steps_per_mm and zoom factor. It
+would be better if we could get directly from SVG px to steps without
+so many conversions.
+
+ */
 
 
 /* --------- */
@@ -393,7 +410,7 @@ void process_commands(char command[], int command_length) // deals with standard
         }
         break;
         
-      case 401: // Propretary: Reset Y-Axis-Stepper settings to new object diameter
+      case 401: // Proprietary: Reset Y-Axis-Stepper settings to new object diameter
         if(getValue('S', command, &value))
         {
           penArmStepper.resetSteppersForObjectDiameter(value);
@@ -404,11 +421,34 @@ void process_commands(char command[], int command_length) // deals with standard
         }
         break;
         
-       case 402: // Propretary: Set global zoom factor
+      case 402: // Proprietary: Set global zoom factor
         if(getValue('S', command, &value))
         {
           zoom = value;
         }
+        break;
+
+      case 410: // Proprietary: Reset X-Axis-Stepper settings to new object circumference
+        if(getValue('S', command, &value))
+        {
+          rotationStepper.resetSteppersForObjectCircumference(value);
+          rotationStepper.setTargetPosition(0.);
+          commitSteppers(maxFeedrate);
+          delay(2000);
+          rotationStepper.enableStepper(false);
+        }
+        break;
+
+      case 411: // Propretary: Reset Y-Axis-Stepper settings to new object circumference
+        if(getValue('S', command, &value))
+        {
+          penArmStepper.resetSteppersForObjectCircumference(value);
+          penArmStepper.setTargetPosition(0.);
+          commitSteppers(maxFeedrate);
+          delay(2000);
+          penArmStepper.enableStepper(false);
+        }
+        break;
 
     }
   }  

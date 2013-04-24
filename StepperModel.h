@@ -55,6 +55,7 @@ public:
           );
   
   void resetSteppersForObjectDiameter(double diameter);
+  void resetSteppersForObjectCircumference(double circumference);
   
 #ifdef AUTO_HOMING
   void autoHoming();
